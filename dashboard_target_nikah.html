@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard Target Nikah</title>
+<style>
+:root{--green:#55a946;--green2:#eaf6e7;--blue:#2196f3;--orange:#f5a623;--red:#ef6b73;--ink:#203020;--line:#dce5dc;--bg:#f4f7f3}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Arial,sans-serif;color:var(--ink)}
+.wrap{max-width:1100px;margin:auto;padding:18px}.head{background:linear-gradient(135deg,#4c9d3f,#76bd61);color:white;border-radius:18px;padding:22px 24px;box-shadow:0 8px 24px #0001}
+.head h1{margin:0;font-size:28px}.head p{margin:6px 0 0;opacity:.9}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0}.card{padding:16px;border-radius:15px;color:#fff;box-shadow:0 5px 16px #0001}.card b{display:block;font-size:13px;margin-bottom:9px}.card strong{font-size:22px}.blue{background:var(--blue)}.green{background:var(--green)}.orange{background:var(--orange)}.red{background:var(--red)}
+.panel{background:#fff;border-radius:16px;padding:18px;margin:14px 0;box-shadow:0 5px 18px #0000000c}.panel h2{margin:0 0 14px;font-size:18px}
+.progress{height:22px;background:#e8eee7;border-radius:99px;overflow:hidden}.progress>div{height:100%;background:linear-gradient(90deg,#55a946,#8bce77);width:14%;transition:.3s}.pct{text-align:right;font-weight:bold;margin-top:6px}
+.chartbox{height:330px}.chartbox svg{width:100%;height:100%;overflow:visible}.axis{stroke:#ccd7cc}.grid{stroke:#e8eee8}.line{fill:none;stroke:#4f8fc8;stroke-width:3}.dot{fill:#4f8fc8}.label{font-size:11px;fill:#607060}
+.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:680px}th{background:var(--green);color:#fff;padding:10px;text-align:left}td{padding:9px;border-bottom:1px solid var(--line)}tr:nth-child(even){background:#fafcf9}
+.form{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px}.form input,.form button{padding:11px;border:1px solid #ccd8ca;border-radius:10px;font-size:14px}.form button{background:var(--green);color:white;border:0;font-weight:bold}
+.small{color:#6a766a;font-size:12px;margin-top:8px}
+@media(max-width:700px){.wrap{padding:10px}.head h1{font-size:22px}.cards{grid-template-columns:repeat(2,1fr)}.card strong{font-size:18px}.form{grid-template-columns:1fr 1fr}.form button{grid-column:1/-1}.chartbox{height:270px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="head"><h1>DASHBOARD TARGET NIKAH</h1><p>Tabungan dan perkembangan target secara otomatis</p></header>
+
+  <section class="cards">
+    <div class="card blue"><b>Target Nikah</b><strong id="target">Rp100.000.000</strong></div>
+    <div class="card green"><b>Terkumpul</b><strong id="collected">Rp14.000.000</strong></div>
+    <div class="card orange"><b>Progres</b><strong id="percent">14%</strong></div>
+    <div class="card red"><b>Sisa</b><strong id="remaining">Rp86.000.000</strong></div>
+  </section>
+
+  <section class="panel">
+    <h2>PROGRESS TARGET</h2>
+    <div class="progress"><div id="bar"></div></div><div class="pct" id="pct2">14%</div>
+  </section>
+
+  <section class="panel">
+    <h2>AKUMULATIF</h2>
+    <div class="chartbox"><svg id="chart" viewBox="0 0 1000 330" preserveAspectRatio="none"></svg></div>
+  </section>
+
+  <section class="panel">
+    <h2>RIWAYAT TABUNGAN</h2>
+    <div class="form">
+      <input id="month" placeholder="Contoh: September 2026">
+      <input id="mamal" type="number" min="0" placeholder="Mamal (Rp)">
+      <input id="biyam" type="number" min="0" placeholder="Biyam (Rp)">
+      <button onclick="addRow()">Tambah</button>
+    </div>
+    <div class="small">Data tersimpan di browser perangkat ini. Gunakan ekspor/impor jika ingin memindahkan data ke perangkat lain.</div>
+    <div class="tablewrap" style="margin-top:14px">
+      <table><thead><tr><th>Bulan</th><th>Mamal</th><th>Biyam</th><th>Total</th><th>Kumulatif</th></tr></thead><tbody id="tbody"></tbody></table>
+    </div>
+  </section>
+</div>
+<script>
+const initial=[
+["Mei 2026",1000000,0],["Juni 2026",1000000,0],["Juli 2026",1000000,0],["Agustus 2026",1000000,0],
+["September 2026",2000000,2000000],["Oktober 2026",2000000,0],
+["November 2026",0,0],["Desember 2026",0,0],["Januari 2027",0,0],["Februari 2027",0,0],["Maret 2027",0,0],
+["April 2027",0,0],["Mei 2027",0,0],["Juni 2027",0,0],["Juli 2027",0,0],["Agustus 2027",0,0],
+["September 2027",0,0],["Oktober 2027",0,0],["November 2027",0,0],["Desember 2027",0,0],
+["Januari 2028",0,0],["Februari 2028",0,0],["Maret 2028",0,0],["April 2028",0,0],["Mei 2028",0,0],
+["Juni 2028",0,0],["Juli 2028",0,0],["Agustus 2028",0,0]
+];
+let rows=JSON.parse(localStorage.getItem("nikahRows")||"null")||initial;
+const target=100000000;
+const rp=n=>"Rp"+Math.round(n).toLocaleString("id-ID");
+function render(){
+ let cum=0; const data=[];
+ tbody.innerHTML="";
+ rows.forEach(r=>{let t=+r[1]+ +r[2];cum+=t;data.push({name:r[0],cum});tbody.innerHTML+=`<tr><td>${r[0]}</td><td>${rp(r[1])}</td><td>${rp(r[2])}</td><td>${rp(t)}</td><td>${rp(cum)}</td></tr>`});
+ let p=Math.min(100,cum/target*100);
+ collected.textContent=rp(cum);remaining.textContent=rp(Math.max(0,target-cum));percent.textContent=Math.round(p)+"%";pct2.textContent=Math.round(p)+"%";bar.style.width=p+"%";
+ draw(data);
+ localStorage.setItem("nikahRows",JSON.stringify(rows));
+}
+function addRow(){
+ const m=month.value.trim();const a=+mamal.value||0;const b=+biyam.value||0;if(!m)return;
+ rows.push([m,a,b]);month.value=mamal.value=biyam.value="";render();
+}
+function draw(data){
+ const svg=document.getElementById("chart"),W=1000,H=330,L=48,R=15,T=15,B=45;
+ const max=Math.max(target,...data.map(x=>x.cum),1);let pts=data.map((x,i)=>[L+i*(W-L-R)/Math.max(data.length-1,1),T+(H-T-B)*(1-x.cum/max)]);
+ let s="";
+ for(let i=0;i<=4;i++){let y=T+(H-T-B)*i/4;let val=max*(1-i/4);s+=`<line class="grid" x1="${L}" x2="${W-R}" y1="${y}" y2="${y}"/><text class="label" x="2" y="${y+4}">${rp(val).replace("Rp","")}</text>`}
+ s+=`<line class="axis" x1="${L}" x2="${W-R}" y1="${H-B}" y2="${H-B}"/>`;
+ s+=`<polyline class="line" points="${pts.map(p=>p.join(",")).join(" ")}"/>`;
+ pts.forEach((p,i)=>{if(i%3===0||i===pts.length-1)s+=`<circle class="dot" cx="${p[0]}" cy="${p[1]}" r="4"/><text class="label" transform="translate(${p[0]},${H-8}) rotate(-38)" text-anchor="end">${data[i].name}</text>`});
+ svg.innerHTML=s;
+}
+render();
+</script>
+</body>
+</html>
