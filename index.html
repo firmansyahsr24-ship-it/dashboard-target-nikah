@@ -1,11 +1,137 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <title>Dashboard Target Nikah</title>
-  <meta http-equiv="refresh" content="0; url=dashboard_target_nikah.html">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Target Nikah</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f5f7f4;color:#222}
+.wrap{max-width:1100px;margin:auto;padding:18px}
+.header{background:#69b34c;color:#fff;text-align:center;font-size:25px;font-weight:700;padding:13px;border-radius:10px 10px 0 0}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px}
+.card{background:#fff;border:1px solid #ddd;border-radius:8px;padding:10px}
+.card h3{margin:0 0 8px;font-size:14px;padding:6px;color:#fff;border-radius:4px}
+.target h3{background:#20a4e6}.saved h3{background:#69b34c}.progress h3{background:#f0a400}.remaining h3{background:#e05b5b}
+.value{font-size:22px;font-weight:700;text-align:center;padding:5px}
+.sources{margin-top:14px;background:#fff;border:1px solid #ddd;border-radius:8px;overflow:hidden}
+.sources-title{background:#69b34c;color:#fff;text-align:center;font-weight:700;padding:10px}
+.source-row{display:grid;grid-template-columns:1fr 180px;border-bottom:1px solid #ddd}
+.source-row:last-child{border:0}.source-row div{padding:9px;border-right:1px solid #ddd}.source-row div:last-child{border:0;text-align:right}
+.progressbox{margin-top:14px;background:#fff;border:1px solid #ddd;border-radius:8px;padding:12px}
+.progress-title{font-weight:700;margin-bottom:8px}
+.bar{height:28px;background:#e9eee8;border-radius:6px;overflow:hidden;border:1px solid #ccc}
+.fill{height:100%;width:14%;background:#39ef39;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;font-weight:700;font-size:12px;transition:.3s}
+.section{margin-top:14px;background:#fff;border:1px solid #ddd;border-radius:8px;overflow:hidden}
+.section-title{background:#69b34c;color:#fff;padding:9px;font-weight:700}
+.table-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:13px}
+th,td{border:1px solid #ccc;padding:7px 8px}th{background:#8acb5e;text-align:center}td.money{text-align:right}
+.chart-area{padding:14px;height:350px}
+canvas{width:100%;height:100%}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+button{border:0;border-radius:7px;padding:10px 14px;background:#69b34c;color:#fff;font-weight:700;cursor:pointer}
+button.secondary{background:#555}
+input{width:100%;padding:8px;border:1px solid #bbb;border-radius:5px}
+.edit{display:none}
+.editing .edit{display:block}.editing .normal{display:none}
+.note{font-size:12px;color:#666;margin-top:8px}
+@media(max-width:700px){
+ .wrap{padding:9px}.header{font-size:20px}
+ .cards{grid-template-columns:repeat(2,1fr)}
+ .value{font-size:17px}.chart-area{height:260px}
+}
+</style>
 </head>
 <body>
-  Membuka Dashboard Target Nikah...
+<div class="wrap">
+  <div class="header">DASHBOARD TARGET NIKAH</div>
+
+  <div class="cards">
+    <div class="card target"><h3>Target Nikah</h3><div class="value normal" id="targetView">Rp100.000.000</div><div class="edit"><input id="targetInput" type="number" value="100000000"></div></div>
+    <div class="card saved"><h3>Terkumpul</h3><div class="value" id="savedView">Rp14.000.000</div></div>
+    <div class="card progress"><h3>Progres</h3><div class="value" id="progressView">14%</div></div>
+    <div class="card remaining"><h3>Sisa</h3><div class="value" id="remainingView">Rp86.000.000</div></div>
+  </div>
+
+  <div class="sources">
+    <div class="sources-title">SUMBER TABUNGAN</div>
+    <div class="source-row"><div>Angsuran Perabot ~ Mamal</div><div id="mama">Rp10.000.000</div></div>
+    <div class="source-row"><div>Nabung ~ Bi Ilyam</div><div id="ilyam">Rp4.000.000</div></div>
+    <div class="source-row"><div><b>TOTAL TERKUMPUL</b></div><div><b id="totalSource">Rp14.000.000</b></div></div>
+  </div>
+
+  <div class="progressbox">
+    <div class="progress-title">PROGRESS TARGET</div>
+    <div class="bar"><div class="fill" id="fill">14%</div></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">RIWAYAT TABUNGAN</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Bulan</th><th>Tahun</th><th>Mamal</th><th>Bi Ilyam</th><th>Total</th><th>Kumulatif</th></tr></thead>
+        <tbody id="history"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">KUMULATIF</div>
+    <div class="chart-area"><canvas id="chart"></canvas></div>
+  </div>
+
+  <div class="actions">
+    <button onclick="toggleEdit()">✏️ Ubah Target</button>
+    <button onclick="saveData()">💾 Simpan</button>
+    <button class="secondary" onclick="resetData()">↺ Kembalikan Data Awal</button>
+  </div>
+  <div class="note">Data tersimpan di perangkat ini (localStorage). Web ini bisa langsung dipasang sebagai GitHub Pages.</div>
+</div>
+
+<script>
+const months=[
+["Mei",2026,1000000,0],["Juni",2026,1000000,0],["Juli",2026,1000000,0],
+["Agustus",2026,3000000,0],["September",2026,2000000,2000000],["Oktober",2026,2000000,2000000],
+["November",2026,0,0],["Desember",2026,0,0],["Januari",2027,0,0],["Februari",2027,0,0],
+["Maret",2027,0,0],["April",2027,0,0],["Mei",2027,0,0],["Juni",2027,0,0],
+["Juli",2027,0,0],["Agustus",2027,0,0],["September",2027,0,0],["Oktober",2027,0,0],
+["November",2027,0,0],["Desember",2027,0,0],["Januari",2028,0,0],["Februari",2028,0,0],
+["Maret",2028,0,0],["April",2028,0,0],["Mei",2028,0,0],["Juni",2028,0,0],
+["Juli",2028,0,0],["Agustus",2028,0,0]
+];
+let data=JSON.parse(localStorage.getItem("nikahDashboard")||"null")||{target:100000000,mama:10000000,ilyam:4000000,months};
+
+function rp(n){return "Rp"+Number(n).toLocaleString("id-ID")}
+function render(){
+ let sourceTotal=data.mama+data.ilyam, saved=sourceTotal, target=data.target;
+ let pct=target?Math.min(100,saved/target*100):0;
+ targetView.textContent=rp(target); savedView.textContent=rp(saved); progressView.textContent=pct.toFixed(0)+"%";
+ remainingView.textContent=rp(Math.max(0,target-saved)); totalSource.textContent=rp(sourceTotal);
+ mama.textContent=rp(data.mama); ilyam.textContent=rp(data.ilyam); fill.style.width=pct+"%"; fill.textContent=pct.toFixed(0)+"%";
+ history.innerHTML=""; let cum=0, labels=[], values=[];
+ data.months.forEach(r=>{
+   let total=r[2]+r[3]; cum+=total; labels.push(r[0]+" "+r[1]); values.push(cum);
+   history.innerHTML+=`<tr><td>${r[0]}</td><td>${r[1]}</td><td class="money">${rp(r[2])}</td><td class="money">${rp(r[3])}</td><td class="money">${rp(total)}</td><td class="money">${rp(cum)}</td></tr>`;
+ });
+ drawChart(labels,values,target);
+}
+function drawChart(labels,values,target){
+ const c=document.getElementById("chart"),x=c.getContext("2d"),d=devicePixelRatio||1;
+ c.width=c.clientWidth*d;c.height=c.clientHeight*d;x.scale(d,d);
+ const w=c.clientWidth,h=c.clientHeight,p={l:55,r:15,t:15,b:42};
+ x.clearRect(0,0,w,h);
+ let max=Math.max(target,...values,1), gw=w-p.l-p.r, gh=h-p.t-p.b;
+ x.strokeStyle="#ddd";x.fillStyle="#555";x.font="11px Arial";
+ for(let i=0;i<=5;i++){let y=p.t+gh-i*gh/5,v=max*i/5;x.beginPath();x.moveTo(p.l,y);x.lineTo(w-p.r,y);x.stroke();x.fillText(rp(v).replace("Rp",""),5,y+4)}
+ x.strokeStyle="#3d6ea8";x.lineWidth=2;x.beginPath();
+ values.forEach((v,i)=>{let xx=p.l+(labels.length==1?0:i*gw/(labels.length-1)),yy=p.t+gh-v/max*gh;i?x.lineTo(xx,yy):x.moveTo(xx,yy)});x.stroke();
+ x.fillStyle="#333";x.font="10px Arial";labels.forEach((lab,i)=>{if(i%3===0||i===labels.length-1){let xx=p.l+(labels.length==1?0:i*gw/(labels.length-1));x.save();x.translate(xx,h-5);x.rotate(-.45);x.fillText(lab,0,0);x.restore()}});
+}
+function toggleEdit(){document.body.classList.toggle("editing");targetInput.value=data.target}
+function saveData(){data.target=Number(targetInput.value)||100000000;localStorage.setItem("nikahDashboard",JSON.stringify(data));document.body.classList.remove("editing");render()}
+function resetData(){localStorage.removeItem("nikahDashboard");location.reload()}
+window.addEventListener("resize",render);render();
+</script>
 </body>
 </html>
